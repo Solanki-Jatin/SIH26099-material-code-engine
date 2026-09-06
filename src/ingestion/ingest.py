@@ -44,11 +44,50 @@ def clean_description(raw_desc: str) -> str:
 
 
 def extract_specs(desc: str) -> dict:
-    """Pull out size/pressure-class/material-grade style tokens."""
-    found = []
-    for pattern in SPEC_PATTERNS:
-        found.extend(re.findall(pattern, desc, flags=re.IGNORECASE))
-    return {"raw_tokens": [str(f) for f in found]} if found else {}
+    """Extract structured specifications required by the Tier 1 contract."""
+
+    size_match = re.search(
+        r"\b(\d+(?:\.\d+)?)\s?(?:IN|inch|NB)\b",
+        desc,
+        flags=re.IGNORECASE,
+    )
+
+    pressure_match = re.search(
+    r"(\d+)\s*#|class\s*(\d+)|(\d+)\s*class",
+    desc,
+    flags=re.IGNORECASE,
+)
+    
+
+    material_match = re.search(
+        r"\b(A\d{3}(?:\s?F\d{3})?|F\d{3}|WCB)\b",
+        desc,
+        flags=re.IGNORECASE,
+    )
+
+    other_attrs = {}
+
+    api_match = re.search(r"\bAPI\s?6D\b", desc, flags=re.IGNORECASE)
+    if api_match:
+        other_attrs["standard"] = "API 6D"
+
+    asme_match = re.search(r"\bASME\s?B16\.\d+\b", desc, flags=re.IGNORECASE)
+    if asme_match:
+        other_attrs["standard_asme"] = asme_match.group(0).upper()
+
+    return {
+        "size": f"{size_match.group(1)} IN" if size_match else None,
+        "material_grade": material_match.group(0).upper() if material_match else None,
+        "pressure_rating": (
+    next(
+        group for group in pressure_match.groups()
+        if group is not None
+    )
+    if pressure_match
+    else None
+),
+        "other_attrs": other_attrs,
+    }
 
 
 def normalize_unit(unit: str) -> str:
@@ -80,8 +119,8 @@ def load_catalog(filepath: str, cpse: str) -> list:
 
 if __name__ == "__main__":
     all_items = []
-    all_items += load_catalog("sample_ongc_catalog.csv", "ONGC")
-    all_items += load_catalog("sample_sail_catalog.csv", "SAIL")
+    all_items += load_catalog("src/ingestion/sample_ongc_catalog.csv", "ONGC")
+    all_items += load_catalog("src/ingestion/sample_sail_catalog.csv", "SAIL")
 
     print(f"Loaded and standardized {len(all_items)} items from {len(COLUMN_MAP)} different CPSE catalog formats\n")
     for item in all_items:
