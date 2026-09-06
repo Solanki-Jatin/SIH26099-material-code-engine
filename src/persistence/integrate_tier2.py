@@ -76,7 +76,7 @@ def enrich_match(match, catalog):
     return enriched
 
 
-def integrate_tier2(dry_run=True):
+def integrate_tier2(dry_run=False):
     """
     Integrate real Tier 2 results into Tier 4.
 
@@ -229,5 +229,5 @@ def integrate_tier2(dry_run=True):
 
 
 if __name__ == "__main__":
-    integrate_tier2(dry_run=True)
+    integrate_tier2(dry_run=False)
 
