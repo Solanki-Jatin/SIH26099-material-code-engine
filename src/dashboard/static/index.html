@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIH26099 — Analytics Dashboard</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 24px; color: #1a1a1a; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .stat-card { background: white; border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .stat-number { font-size: 28px; font-weight: 700; }
+  .stat-label { font-size: 12px; color: #777; margin-top: 4px; }
+  .teal { color: #0d9488; } .amber { color: #b45309; } .red { color: #b91c1c; } .navy { color: #1e3a8a; }
+  .section { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .section h2 { font-size: 16px; margin-top: 0; }
+  .formula { font-family: monospace; background: #f4f6f8; padding: 10px 14px; border-radius: 6px; font-size: 13px; margin: 10px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  th { color: #777; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge-auto { background: #d1fae5; color: #065f46; }
+  .badge-human { background: #dbeafe; color: #1e40af; }
+</style>
+</head>
+<body>
+  <h1>Analytics Dashboard</h1>
+  <div class="subtitle">Live view of matching, review, and Safety Gate activity.</div>
+
+  <div class="stat-grid" id="statGrid"></div>
+
+  <div class="section">
+    <h2>Savings Estimate (formula-based, not pre-claimed)</h2>
+    <div class="formula" id="formulaText">Loading...</div>
+    <div class="stat-number teal" id="savingsNumber">—</div>
+    <div class="stat-label" id="savingsNote"></div>
+  </div>
+
+  <div class="section">
+    <h2>Confirmed Common National Material Codes</h2>
+    <table>
+      <thead><tr><th>Match ID</th><th>Item A</th><th>Item B</th><th>Confidence</th><th>Type</th></tr></thead>
+      <tbody id="cnmcTable"></tbody>
+    </table>
+  </div>
+
+<script>
+const API = "";
+
+async function loadStats() {
+  const res = await fetch(API + "/api/summary");
+  const s = await res.json();
+  const grid = document.getElementById("statGrid");
+  grid.innerHTML = `
+    <div class="stat-card"><div class="stat-number navy">${s.total_pairs_evaluated}</div><div class="stat-label">Pairs Evaluated</div></div>
+    <div class="stat-card"><div class="stat-number teal">${s.auto_linked}</div><div class="stat-label">Auto-Linked</div></div>
+    <div class="stat-card"><div class="stat-number amber">${s.pending_review_now}</div><div class="stat-label">Pending Review</div></div>
+    <div class="stat-card"><div class="stat-number teal">${s.human_approved}</div><div class="stat-label">Human Approved</div></div>
+    <div class="stat-card"><div class="stat-number red">${s.safety_gate_blocked}</div><div class="stat-label">Safety Gate Blocks</div></div>
+    <div class="stat-card"><div class="stat-number navy">${s.total_cnmc_generated_estimate}</div><div class="stat-label">CNMCs Generated</div></div>
+  `;
+}
+
+async function loadSavings() {
+  const res = await fetch(API + "/api/savings-estimate");
+  const s = await res.json();
+  document.getElementById("formulaText").textContent =
+    `${s.formula}  ->  ₹${s.inputs.procurement_value_cr.toLocaleString()} Cr x ${s.inputs.duplicate_pct}%`;
+  document.getElementById("savingsNumber").textContent = `≈ ₹${s.estimated_savings_cr.toLocaleString()} Cr`;
+  document.getElementById("savingsNote").textContent = s.note;
+}
+
+async function loadCnmc() {
+  const res = await fetch(API + "/api/cnmc-preview");
+  const data = await res.json();
+  const tbody = document.getElementById("cnmcTable");
+  tbody.innerHTML = "";
+  if (data.confirmed_matches.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">No confirmed matches yet.</td></tr>';
+    return;
+  }
+  data.confirmed_matches.forEach(m => {
+    const badge = m.merge_type === "auto"
+      ? '<span class="badge badge-auto">Auto-Link</span>'
+      : '<span class="badge badge-human">Human Approved</span>';
+    tbody.innerHTML += `<tr>
+      <td>${m.match_id}</td><td>${m.item_a}</td><td>${m.item_b}</td>
+      <td>${(m.confidence * 100).toFixed(1)}%</td><td>${badge}</td>
+    </tr>`;
+  });
+}
+
+loadStats();
+loadSavings();
+loadCnmc();
+</script>
+</body>
+</html>
