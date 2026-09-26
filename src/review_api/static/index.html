@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIH26099 — Human Review Queue</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 24px; color: #1a1a1a; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
+  .card { background: white; border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .items { display: flex; gap: 16px; margin-bottom: 12px; }
+  .item-box { flex: 1; background: #f9f9fb; border-radius: 8px; padding: 12px 14px; border: 1px solid #e5e5ea; }
+  .item-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .item-desc { font-size: 14px; font-weight: 500; }
+  .score-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .confidence { font-weight: 700; font-size: 15px; padding: 4px 10px; border-radius: 6px; background: #fff3cd; color: #856404; }
+  .breakdown { font-size: 12px; color: #666; }
+  .actions { display: flex; gap: 10px; }
+  button { border: none; border-radius: 6px; padding: 8px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .approve { background: #16a34a; color: white; }
+  .approve:hover { background: #128a3e; }
+  .reject { background: #dc2626; color: white; }
+  .reject:hover { background: #b91c1c; }
+  .empty { text-align: center; color: #888; padding: 60px 0; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: #1a1a1a; color: white; padding: 12px 18px; border-radius: 8px; font-size: 14px; display: none; }
+  .reviewer-input { margin-bottom: 18px; }
+  .reviewer-input input { padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; width: 220px; }
+</style>
+</head>
+<body>
+  <h1>Human Review Queue</h1>
+  <div class="subtitle">Matches below the 85% confidence threshold — review and approve or reject.</div>
+
+  <div class="reviewer-input">
+    <label for="reviewerId" style="font-size:13px;color:#555;margin-right:8px;">Reviewer ID:</label>
+    <input id="reviewerId" placeholder="e.g. jatin.s" value="reviewer1">
+  </div>
+
+  <div id="queue"></div>
+  <div id="toast" class="toast"></div>
+
+<script>
+const API = "";
+
+async function loadQueue() {
+  const res = await fetch(API + "/api/pending-reviews");
+  const data = await res.json();
+  const container = document.getElementById("queue");
+  container.innerHTML = "";
+
+  if (data.pending_reviews.length === 0) {
+    container.innerHTML = '<div class="empty">No pending reviews right now.</div>';
+    return;
+  }
+
+  data.pending_reviews.forEach(m => {
+    const card = document.createElement("div");
+    card.className = "card";
+    const breakdown = m.score_breakdown || {};
+    card.innerHTML = `
+      <div class="items">
+        <div class="item-box">
+          <div class="item-label">${m.item_a}</div>
+          <div class="item-desc">${m.description_a}</div>
+        </div>
+        <div class="item-box">
+          <div class="item-label">${m.item_b}</div>
+          <div class="item-desc">${m.description_b}</div>
+        </div>
+      </div>
+      <div class="score-row">
+        <span class="confidence">Confidence: ${(m.confidence_score * 100).toFixed(1)}%</span>
+        <span class="breakdown">
+          text ${((breakdown.text_similarity||0)*100).toFixed(0)}% ·
+          specs ${((breakdown.spec_match||0)*100).toFixed(0)}% ·
+          units ${((breakdown.unit_compatibility||0)*100).toFixed(0)}%
+        </span>
+      </div>
+      <div class="actions">
+        <button class="approve" onclick="decide('${m.match_id}', 'approved')">Approve</button>
+        <button class="reject" onclick="decide('${m.match_id}', 'rejected')">Reject</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+async function decide(matchId, decision) {
+  const reviewerId = document.getElementById("reviewerId").value || "reviewer1";
+  await fetch(API + "/api/review-decision", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ match_id: matchId, reviewer_decision: decision, reviewer_id: reviewerId })
+  });
+  showToast(decision === "approved" ? "Approved ✓" : "Rejected ✗");
+  loadQueue();
+}
+
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.style.display = "block";
+  setTimeout(() => toast.style.display = "none", 1800);
+}
+
+loadQueue();
+</script>
+</body>
+</html>
