@@ -117,6 +117,40 @@ def enrich_match(match: dict):
     return enriched_match
 
 
+@router.get("/pending-reviews")
+def get_pending_reviews():
+    """
+    Lists Tier 2 matches with status == 'needs_review' that haven't been
+    decided yet in this session. review_decisions is in-memory, so this
+    resets if the server restarts, acceptable for a prototype demo, worth
+    moving to persistent storage before a production pilot.
+    """
+    matches = load_tier2_matches()
+    catalog = load_tier1_catalog()
+
+    pending = []
+    for m in matches:
+        if m.get("status") != "needs_review":
+            continue
+        if m.get("match_id") in review_decisions:
+            continue
+
+        item_a = catalog.get(m.get("item_a"), {})
+        item_b = catalog.get(m.get("item_b"), {})
+
+        pending.append({
+            "match_id": m.get("match_id"),
+            "item_a": m.get("item_a"),
+            "item_b": m.get("item_b"),
+            "description_a": item_a.get("clean_description", "(unavailable)"),
+            "description_b": item_b.get("clean_description", "(unavailable)"),
+            "confidence_score": m.get("confidence_score"),
+            "score_breakdown": m.get("score_breakdown", {}),
+        })
+
+    return {"count": len(pending), "pending_reviews": pending}
+
+
 @router.post("/review-decision")
 def submit_review_decision(decision: ReviewDecisionRequest):
 

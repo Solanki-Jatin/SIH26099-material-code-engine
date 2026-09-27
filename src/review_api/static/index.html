@@ -90,7 +90,7 @@ async function decide(matchId, decision) {
   await fetch(API + "/api/review-decision", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ match_id: matchId, reviewer_decision: decision, reviewer_id: reviewerId })
+    body: JSON.stringify({ match_id: matchId, reviewer_decision: decision, reviewer_id: reviewerId, reviewed_at: new Date().toISOString() })
   });
   showToast(decision === "approved" ? "Approved ✓" : "Rejected ✗");
   loadQueue();

@@ -21,11 +21,13 @@
   .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
   .badge-auto { background: #d1fae5; color: #065f46; }
   .badge-human { background: #dbeafe; color: #1e40af; }
+  .note { font-size: 11px; color: #999; margin-top: 8px; }
+  .mapped { font-size: 11px; color: #666; }
 </style>
 </head>
 <body>
   <h1>Analytics Dashboard</h1>
-  <div class="subtitle">Live view of matching, review, and Safety Gate activity.</div>
+  <div class="subtitle">Live view, queried directly from the same database Tier 3 and Tier 4 write to.</div>
 
   <div class="stat-grid" id="statGrid"></div>
 
@@ -39,7 +41,7 @@
   <div class="section">
     <h2>Confirmed Common National Material Codes</h2>
     <table>
-      <thead><tr><th>Match ID</th><th>Item A</th><th>Item B</th><th>Confidence</th><th>Type</th></tr></thead>
+      <thead><tr><th>CNMC Code</th><th>Description</th><th>Confidence</th><th>Type</th><th>Mapped Codes</th></tr></thead>
       <tbody id="cnmcTable"></tbody>
     </table>
   </div>
@@ -54,10 +56,10 @@ async function loadStats() {
   grid.innerHTML = `
     <div class="stat-card"><div class="stat-number navy">${s.total_pairs_evaluated}</div><div class="stat-label">Pairs Evaluated</div></div>
     <div class="stat-card"><div class="stat-number teal">${s.auto_linked}</div><div class="stat-label">Auto-Linked</div></div>
-    <div class="stat-card"><div class="stat-number amber">${s.pending_review_now}</div><div class="stat-label">Pending Review</div></div>
+    <div class="stat-card"><div class="stat-number amber">${s.pending_review_estimate}</div><div class="stat-label">Pending Review (est.)</div></div>
     <div class="stat-card"><div class="stat-number teal">${s.human_approved}</div><div class="stat-label">Human Approved</div></div>
     <div class="stat-card"><div class="stat-number red">${s.safety_gate_blocked}</div><div class="stat-label">Safety Gate Blocks</div></div>
-    <div class="stat-card"><div class="stat-number navy">${s.total_cnmc_generated_estimate}</div><div class="stat-label">CNMCs Generated</div></div>
+    <div class="stat-card"><div class="stat-number navy">${s.total_cnmc_generated}</div><div class="stat-label">CNMCs Generated</div></div>
   `;
 }
 
@@ -83,9 +85,11 @@ async function loadCnmc() {
     const badge = m.merge_type === "auto"
       ? '<span class="badge badge-auto">Auto-Link</span>'
       : '<span class="badge badge-human">Human Approved</span>';
+    const mapped = m.mapped_codes.map(c => `${c.cpse}: ${c.original_code}`).join(", ");
     tbody.innerHTML += `<tr>
-      <td>${m.match_id}</td><td>${m.item_a}</td><td>${m.item_b}</td>
+      <td>${m.cnmc_code}</td><td>${m.canonical_description}</td>
       <td>${(m.confidence * 100).toFixed(1)}%</td><td>${badge}</td>
+      <td class="mapped">${mapped}</td>
     </tr>`;
   });
 }
