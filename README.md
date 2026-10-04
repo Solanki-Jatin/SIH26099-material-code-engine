@@ -147,7 +147,7 @@ uvicorn src.dashboard.main:app --reload --port 8002
 
 ## Demo Video
 
-[Video walkthrough - link to be added]
+[[Video walkthrough](https://youtu.be/De3sPwdynIs?si=7qsrjffLpJ_Dt6YR)]
 
 A short walkthrough covering the problem, the architecture, and a live run of the Safety Gate blocking an unsafe merge in real time.
 
@@ -171,4 +171,4 @@ A short walkthrough covering the problem, the architecture, and a live run of th
 
 ## Team
 
-**Popeye** — Team ID 131803, Smart India Hackathon 2026
+**Popeye** - Team ID 131803, Smart India Hackathon 2026
